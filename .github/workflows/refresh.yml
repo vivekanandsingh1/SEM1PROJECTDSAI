@@ -1,0 +1,31 @@
+name: Refresh data
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    env:
+      GHPULSE_LAKE_PATH: data/lake
+      GHPULSE_SERVING_PATH: data/serving
+      GHPULSE_AUDIT_PATH: data/audit
+      GHPULSE_WAREHOUSE_URL: ${{ secrets.GHPULSE_WAREHOUSE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+      - name: Run pipeline for one recent hour
+        run: |
+          python -c "
+          from datetime import datetime, timedelta, timezone
+          from ghpulse.pipeline import run_hour
+          ts = (datetime.now(timezone.utc) - timedelta(hours=3)).replace(
+              minute=0, second=0, microsecond=0, tzinfo=None)
+          print('target', ts)
+          print(run_hour(ts))
+          "
