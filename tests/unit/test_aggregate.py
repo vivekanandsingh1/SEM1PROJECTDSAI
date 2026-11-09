@@ -99,6 +99,18 @@ def test_multi_file_rollup(tmp_path):
     assert row == (5, 2)
 
 
+def test_null_repo_rows_skipped(tmp_path):
+    events = [_event(0), {**_event(1, "ForkEvent"), "repo": None}]
+    src = _make_curated(tmp_path, events)
+    dst = str(tmp_path / "serving.parquet")
+    assert build_serving(src, dst) == 1
+    con = duckdb.connect()
+    nulls = con.execute(
+        "SELECT COUNT(*) FROM read_parquet(?) WHERE repo_name IS NULL", [dst]
+    ).fetchone()[0]
+    assert nulls == 0
+
+
 def test_empty_glob_returns_zero(tmp_path):
     glob = str(tmp_path / "nonexistent" / "*.parquet")
     dst = str(tmp_path / "serving.parquet")

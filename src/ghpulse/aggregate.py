@@ -10,6 +10,7 @@ COPY (
         COUNT(*) FILTER (WHERE event_type = 'IssueCommentEvent')  AS comment_count,
         COUNT(DISTINCT actor_login)                                AS unique_contributors
     FROM read_parquet($src)
+    WHERE repo_name IS NOT NULL
     GROUP BY 1, 2
 ) TO $dst (FORMAT PARQUET)
 """
