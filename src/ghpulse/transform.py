@@ -2,7 +2,7 @@ import duckdb
 
 MAX_DROP_RATIO = 0.001
 
-COUNT_SQL = "SELECT COUNT(*) FROM read_json_auto(?)"
+COUNT_SQL = "SELECT COUNT(*) FROM read_json_auto($src)"
 
 COPY_SQL = """
 COPY (
@@ -14,17 +14,17 @@ COPY (
         created_at::TIMESTAMP AS created_at,
         payload.action        AS payload_action,
         org.login             AS org_login
-    FROM read_json_auto(?, ignore_errors=true)
-) TO ? (FORMAT PARQUET)
+    FROM read_json_auto($src, ignore_errors=true)
+) TO $dst (FORMAT PARQUET)
 """
 
 
 def to_parquet(src: str, dst: str) -> tuple[int, int]:
     con = duckdb.connect()
-    total = con.execute(COUNT_SQL, [src]).fetchone()[0]
+    total = con.execute(COUNT_SQL, {"src": src}).fetchone()[0]
     if total == 0:
         return 0, 0
-    con.execute(COPY_SQL, [dst, src])
+    con.execute(COPY_SQL, {"src": src, "dst": dst})
     written = con.execute("SELECT COUNT(*) FROM read_parquet(?)", [dst]).fetchone()[0]
     dropped = total - written
     if dropped / total > MAX_DROP_RATIO:

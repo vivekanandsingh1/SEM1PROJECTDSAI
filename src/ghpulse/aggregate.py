@@ -9,16 +9,16 @@ COPY (
         COUNT(*) FILTER (WHERE event_type = 'PullRequestEvent')   AS pr_count,
         COUNT(*) FILTER (WHERE event_type = 'IssueCommentEvent')  AS comment_count,
         COUNT(DISTINCT actor_login)                                AS unique_contributors
-    FROM read_parquet(?)
+    FROM read_parquet($src)
     GROUP BY 1, 2
-) TO ? (FORMAT PARQUET)
+) TO $dst (FORMAT PARQUET)
 """
 
 
 def build_serving(src_glob: str, dst: str) -> int:
     con = duckdb.connect()
     try:
-        con.execute(ROLLUP_SQL, [dst, src_glob])
+        con.execute(ROLLUP_SQL, {"src": src_glob, "dst": dst})
     except duckdb.IOException:
         return 0
     return con.execute("SELECT COUNT(*) FROM read_parquet(?)", [dst]).fetchone()[0]
